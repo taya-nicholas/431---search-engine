@@ -15,14 +15,13 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 
 #[derive(Encode, Decode, PartialEq, Debug)]
 struct Index {
-    ii: HashMap<String, Vec<u32>>,
+    ii: HashMap<String, Vec<(u32, u32)>>,
 }
 
 fn parse_very_hack(contents: &str) {
     let mut chars = contents.chars();
     let mut temp_word = String::new();
-    let mut index: HashMap<String, Vec<u32>> = HashMap::new();
-    let mut temp_vec = vec![];
+    let mut index: HashMap<String, Vec<(u32, u32)>> = HashMap::new();
     let mut doc_id = 0;
 
     while let Some(mut c) = chars.next() {
@@ -41,14 +40,21 @@ fn parse_very_hack(contents: &str) {
                     // Complete word found - do something here.
                     match index.get_mut(&temp_word) {
                         Some(vec) => {
-                            vec.push(doc_id);
+                            // vec.push(doc_id);
+                            // if most recent posting has current doc_id, then increment word count, else add new posting.
+                            if vec.last().unwrap().0 == doc_id {
+                                let mut temp_vec = vec.pop().unwrap();
+                                temp_vec.1 = temp_vec.1 + 1;
+                                vec.push(temp_vec);
+                            } else {
+                                vec.push((doc_id, 1));
+                            }
                         }
                         None => {
-                            let vec = vec![doc_id];
+                            let vec = vec![(doc_id, 1)];
                             index.insert(temp_word.clone(), vec);
                         }
                     }
-                    temp_vec.push(temp_word.clone()); // just for testing, remove in final
                 }
                 temp_word.clear();
             } else {
@@ -58,6 +64,7 @@ fn parse_very_hack(contents: &str) {
     }
     // println!("Index: {:?}", index);
     println!("Len: {:?}", index.len());
+    println!("Max doc id: {}", &doc_id);
 
     let index_serial = Index { ii: index };
     let config = config::standard();

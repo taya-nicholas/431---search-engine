@@ -1,9 +1,11 @@
+use bincode::{config, encode_into_std_write, Decode, Encode};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fs;
+use std::{fs::File, io::Read};
 
 pub fn run() -> Result<(), Box<dyn Error>> {
-    let filename = "data/course_data/wsj.small.xml";
+    let filename = "data/course_data/wsj.xml";
     // let filename = "data/course_data/wsj.xml";
     let test_file = fs::read_to_string(filename)?;
     let lower_test_file = test_file.to_ascii_lowercase();
@@ -11,68 +13,55 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-// Current runtime: 103 seconds.
-// Perhaps can be faster by no converting to chars, and istead just incrementing a pointer to the string slice.
+#[derive(Encode, Decode, PartialEq, Debug)]
+struct Index {
+    ii: HashMap<String, Vec<u32>>,
+}
 
 fn parse_very_hack(contents: &str) {
     let mut chars = contents.chars();
-    let mut tag_mode = true;
-
-    let mut tag = String::new();
-    let mut word = String::new();
-
-    let mut dict: HashSet<String> = HashSet::new();
+    let mut temp_word = String::new();
     let mut index: HashMap<String, Vec<u32>> = HashMap::new();
-    let mut current_doc_num = 0;
-    // println!("Chars: {:?}", chars);
+    let mut temp_vec = vec![];
+    let mut doc_id = 0;
 
-    while let Some(c) = chars.next() {
-        // let c = c.to_ascii_lowercase();
-        if tag_mode {
-            tag.push(c);
-            if c == '>' {
-                tag_mode = false;
-                if tag == "<doc>" {
-                    println!("New doc: {}", current_doc_num);
-                    current_doc_num += 1;
-                }
-                tag.clear();
+    while let Some(mut c) = chars.next() {
+        if c == '<' {
+            let mut tag = String::new();
+            while c != '>' {
+                tag.push(c);
+                c = chars.next().unwrap();
+            }
+            if tag == "<doc" {
+                doc_id += 1;
             }
         } else {
-            if c == '<' {
-                tag.push(c);
-                tag_mode = true;
-                if word != "" {
-                    // println!("{}", word.clone());
-                    dict.insert(word.clone());
-                    if dict.contains(&word) {
-                        index.get(&word).unwrap().push(current_doc_num);
-                    } else {
-                        index.insert(word.clone(), vec![current_doc_num]);
+            if !c.is_ascii_alphanumeric() {
+                if !temp_word.is_empty() {
+                    // Complete word found - do something here.
+                    match index.get_mut(&temp_word) {
+                        Some(vec) => {
+                            vec.push(doc_id);
+                        }
+                        None => {
+                            let vec = vec![doc_id];
+                            index.insert(temp_word.clone(), vec);
+                        }
                     }
-                    word.clear();
+                    temp_vec.push(temp_word.clone()); // just for testing, remove in final
                 }
-                continue;
-            }
-            if c.is_ascii_alphanumeric() {
-                word.push(c);
-            }
-            if c == ' ' || c == '\n' {
-                if word != "" {
-                    // println!("{}", word.clone());
-                    dict.insert(word.clone());
-                    if dict.contains(&word) {
-                        index.get(&word.clone()).unwrap().push(current_doc_num);
-                    } else {
-                        index.insert(word.clone(), vec![current_doc_num]);
-                    }
-                    word.clear();
-                }
+                temp_word.clear();
+            } else {
+                temp_word.push(c);
             }
         }
     }
+    // println!("Index: {:?}", index);
+    println!("Len: {:?}", index.len());
 
-    // println!("Tags: {}", tag);
-    println!("Words: {}", dict.len());
-    println!("Index: {:?}", index);
+    let index_serial = Index { ii: index };
+    let config = config::standard();
+
+    let mut file = File::create("index.bin").unwrap();
+    encode_into_std_write(index_serial, &mut file, config).unwrap();
 }
