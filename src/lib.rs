@@ -1,14 +1,21 @@
+use bincode::{config, encode_into_std_write, Decode, Encode};
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fs;
+use std::{fs::File, io::Read};
 
 pub fn run() -> Result<(), Box<dyn Error>> {
-    let filename = "data/course_data/wsj.small.xml";
+    let filename = "data/course_data/wsj.xml";
     // let filename = "data/course_data/wsj.xml";
     let test_file = fs::read_to_string(filename)?;
     let lower_test_file = test_file.to_ascii_lowercase();
     parse_very_hack(&lower_test_file);
     Ok(())
+}
+
+#[derive(Encode, Decode, PartialEq, Debug)]
+struct Index {
+    ii: HashMap<String, Vec<u32>>,
 }
 
 fn parse_very_hack(contents: &str) {
@@ -49,6 +56,12 @@ fn parse_very_hack(contents: &str) {
             }
         }
     }
-    println!("Index: {:?}", index);
+    // println!("Index: {:?}", index);
     println!("Len: {:?}", index.len());
+
+    let index_serial = Index { ii: index };
+    let config = config::standard();
+
+    let mut file = File::create("index.bin").unwrap();
+    encode_into_std_write(index_serial, &mut file, config).unwrap();
 }
