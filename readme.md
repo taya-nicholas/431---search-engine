@@ -2,6 +2,10 @@
 
 ## Indexer
 
+#### Iteration 3
+
+Doc_ids are stored as d-gaps.
+
 #### Iteration 2
 
 Index stored as HashMap(String, Vec((u32, u32))). In other words, a list of tupes (doc_id, word_count).
@@ -16,13 +20,13 @@ Struct of HashMap is then converted into bincode, which is stored as .bin file.
 
 #### Iteratoin 3
 
-Basic Index: ?
+Basic Index: 29 seconds.
 
 - Parse words: 3 seconds.
-- Load words into index: ?
-  Encoding and storing file: ?
-  File size: ?
-  Loading file: ?
+- Load words into index: 26 seconds.
+  Encoding and storing file: 5.2 minutes.
+  File size: 92 MB.
+  Loading file: 2.5 minutes.
 
 #### Iteration 2
 

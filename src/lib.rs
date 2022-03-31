@@ -6,9 +6,12 @@ use std::time::Instant;
 use std::{fs::File, io::Read};
 
 pub fn run() {
-    let filename = "data/course_data/wsj.small.xml";
-    // load_index();
+    // create_index();
+    load_index();
+}
 
+fn create_index() {
+    let filename = "data/course_data/wsj.xml";
     let now = Instant::now();
     let test_file = fs::read_to_string(filename).unwrap();
     let elapsed = now.elapsed();
@@ -20,21 +23,27 @@ pub fn run() {
     println!("Convert lowercase elapsed: {:.5?}", elapsed.as_secs_f64());
 
     let mut index = Index::new();
-    // index.parse_contents(&lower_test_file);
     let words = index.parse_words(&lower_test_file);
+
+    let now = Instant::now();
     index.create_tree(&words);
+    index.encode_to_d_gap();
+    let elapsed = now.elapsed();
+    println!("Make tree elapsed: {:.5?}", elapsed.as_secs_f64());
 
-    println!("TREE: {:?}", index.btree);
-
-    // parse_very_hack(&lower_test_file);
-    println!("End of run");
-    // Ok(())
+    let now = Instant::now();
+    index.save_file();
+    let elapsed = now.elapsed();
+    println!("Read file elapsed: {:.5?}", elapsed.as_secs_f64());
 }
 
 fn load_index() {
+    let now = Instant::now();
     let config = config::standard();
     let mut file = File::open("index.bin").unwrap();
     let decoded: Index = bincode::decode_from_std_read(&mut file, config).unwrap();
+    let elapsed = now.elapsed();
+    println!("Load index elapsed: {:.5?}", elapsed.as_secs_f64());
 }
 
 #[derive(Encode, Decode, PartialEq, Debug)]
@@ -116,6 +125,35 @@ impl Index {
                 self.btree.insert(word.to_string(), vec);
             }
         }
+    }
+
+    fn encode_to_d_gap(&mut self) {
+        for (key, value) in self.btree.iter_mut() {
+            let mut prev_doc = 0;
+            for posting in value {
+                let temp_doc = posting.0.clone();
+                posting.0 = posting.0 - prev_doc;
+                prev_doc = temp_doc;
+            }
+        }
+    }
+
+    fn search(self, search_term: &str) {
+        match self.btree.get(search_term) {
+            Some(vec) => {
+                println!("Found: {:?}", vec);
+            }
+            None => {
+                println!("No results found for: {}", search_term);
+            }
+        }
+    }
+
+    fn save_file(self) {
+        let index_serial = self.btree;
+        let config = config::standard();
+        let mut file = File::create("index.bin").unwrap();
+        encode_into_std_write(index_serial, &mut file, config).unwrap();
     }
 
     fn parse_contents(&mut self, contents: &str) {
