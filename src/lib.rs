@@ -2,6 +2,7 @@ use bincode::{config, encode_into_std_write, Decode, Encode};
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::error::Error;
 use std::fs;
+use std::io::BufReader;
 use std::time::Instant;
 use std::{fs::File, io::Read};
 
@@ -40,10 +41,12 @@ fn create_index() {
 fn load_index() {
     let now = Instant::now();
     let config = config::standard();
-    let mut file = File::open("index.bin").unwrap();
-    let decoded: Index = bincode::decode_from_std_read(&mut file, config).unwrap();
+    let file = File::open("index.bin").unwrap();
+    let file = BufReader::new(file);
+    let decoded: Index = bincode::decode_from_reader(file, config).unwrap();
     let elapsed = now.elapsed();
     println!("Load index elapsed: {:.5?}", elapsed.as_secs_f64());
+    println!("Len: {}", decoded.btree.len());
 }
 
 #[derive(Encode, Decode, PartialEq, Debug)]

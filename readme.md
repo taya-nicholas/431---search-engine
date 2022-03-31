@@ -4,7 +4,7 @@
 
 #### Iteration 3
 
-Doc_ids are stored as d-gaps.
+Doc_ids are stored as d-gaps. File read through BuffReader.
 
 #### Iteration 2
 
@@ -26,7 +26,7 @@ Basic Index: 29 seconds.
 - Load words into index: 26 seconds.
   Encoding and storing file: 5.2 minutes.
   File size: 92 MB.
-  Loading file: 2.5 minutes.
+  Loading file: 0.6 seconds.
 
 #### Iteration 2
 
