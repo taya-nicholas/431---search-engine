@@ -1,74 +1,146 @@
 use bincode::{config, encode_into_std_write, Decode, Encode};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::error::Error;
 use std::fs;
+use std::time::Instant;
 use std::{fs::File, io::Read};
 
-pub fn run() -> Result<(), Box<dyn Error>> {
-    let filename = "data/course_data/wsj.xml";
-    // let filename = "data/course_data/wsj.xml";
-    let test_file = fs::read_to_string(filename)?;
+pub fn run() {
+    let filename = "data/course_data/wsj.small.xml";
+    // load_index();
+
+    let now = Instant::now();
+    let test_file = fs::read_to_string(filename).unwrap();
+    let elapsed = now.elapsed();
+    println!("Read file elapsed: {:.5?}", elapsed.as_secs_f64());
+
+    let now = Instant::now();
     let lower_test_file = test_file.to_ascii_lowercase();
-    parse_very_hack(&lower_test_file);
-    Ok(())
+    let elapsed = now.elapsed();
+    println!("Convert lowercase elapsed: {:.5?}", elapsed.as_secs_f64());
+
+    let mut index = Index::new();
+    // index.parse_contents(&lower_test_file);
+    index.parse_words(&lower_test_file);
+
+    // parse_very_hack(&lower_test_file);
+    println!("End of run");
+    // Ok(())
+}
+
+fn load_index() {
+    let config = config::standard();
+    let mut file = File::open("index.bin").unwrap();
+    let decoded: Index = bincode::decode_from_std_read(&mut file, config).unwrap();
 }
 
 #[derive(Encode, Decode, PartialEq, Debug)]
 struct Index {
-    ii: HashMap<String, Vec<(u32, u32)>>,
+    ii: BTreeMap<String, Vec<(u32, u32)>>,
 }
 
-fn parse_very_hack(contents: &str) {
-    let mut chars = contents.chars();
-    let mut temp_word = String::new();
-    let mut index: HashMap<String, Vec<(u32, u32)>> = HashMap::new();
-    let mut doc_id = 0;
+impl Index {
+    fn new() -> Index {
+        return Index {
+            ii: BTreeMap::new(),
+        };
+    }
 
-    while let Some(mut c) = chars.next() {
-        if c == '<' {
-            let mut tag = String::new();
-            while c != '>' {
-                tag.push(c);
-                c = chars.next().unwrap();
-            }
-            if tag == "<doc" {
-                doc_id += 1;
-            }
-        } else {
-            if !c.is_ascii_alphanumeric() {
-                if !temp_word.is_empty() {
-                    // Complete word found - do something here.
-                    match index.get_mut(&temp_word) {
-                        Some(vec) => {
-                            // vec.push(doc_id);
-                            // if most recent posting has current doc_id, then increment word count, else add new posting.
-                            if vec.last().unwrap().0 == doc_id {
-                                let mut temp_vec = vec.pop().unwrap();
-                                temp_vec.1 = temp_vec.1 + 1;
-                                vec.push(temp_vec);
-                            } else {
-                                vec.push((doc_id, 1));
-                            }
-                        }
-                        None => {
-                            let vec = vec![(doc_id, 1)];
-                            index.insert(temp_word.clone(), vec);
-                        }
-                    }
+    fn parse_words(&self, contents: &str) {
+        let mut chars = contents.chars();
+        let mut temp_word = String::new();
+        let mut word_count = 0;
+
+        let now = Instant::now();
+        while let Some(mut c) = chars.next() {
+            if c == '<' {
+                let mut tag = String::new();
+                while c != '>' {
+                    tag.push(c);
+                    c = chars.next().unwrap();
                 }
-                temp_word.clear();
+                if tag == "<doc" {
+                    println!("");
+                }
             } else {
-                temp_word.push(c);
+                if c == ' ' || c == '\n' {
+                    if !temp_word.is_empty() {
+                        println!("{}", &temp_word);
+                        word_count += 1;
+                    }
+                    temp_word.clear();
+                } else if c.is_ascii_alphanumeric() {
+                    temp_word.push(c);
+                }
             }
         }
+        let elapsed = now.elapsed();
+        println!("Parse XML elapsed: {:.5?}", elapsed.as_secs_f64());
+        println!("Word count: {}", word_count);
     }
-    // println!("Index: {:?}", index);
-    println!("Len: {:?}", index.len());
-    println!("Max doc id: {}", &doc_id);
 
-    let index_serial = Index { ii: index };
-    let config = config::standard();
+    fn parse_contents(&mut self, contents: &str) {
+        let mut chars = contents.chars();
+        let mut temp_word = String::new();
+        // let mut index: BTreeMap<String, Vec<(u32, u32)>> = BTreeMap::new();
+        let mut doc_id = 0;
 
-    let mut file = File::create("index.bin").unwrap();
-    encode_into_std_write(index_serial, &mut file, config).unwrap();
+        let now = Instant::now();
+        while let Some(mut c) = chars.next() {
+            if c == '<' {
+                let mut tag = String::new();
+                while c != '>' {
+                    tag.push(c);
+                    c = chars.next().unwrap();
+                }
+                if tag == "<doc" {
+                    doc_id += 1;
+                }
+            } else {
+                if !c.is_ascii_alphanumeric() {
+                    if !temp_word.is_empty() {
+                        // Complete word found - do something here.
+                        match self.ii.get_mut(&temp_word) {
+                            Some(vec) => {
+                                // vec.push(doc_id);
+                                // if most recent posting has current doc_id, then increment word count, else add new posting.
+                                if vec.last().unwrap().0 == doc_id {
+                                    let mut temp_vec = vec.pop().unwrap();
+                                    temp_vec.1 = temp_vec.1 + 1;
+                                    vec.push(temp_vec);
+                                } else {
+                                    vec.push((doc_id, 1));
+                                }
+                            }
+                            None => {
+                                let vec = vec![(doc_id, 1)];
+                                self.ii.insert(temp_word.clone(), vec);
+                            }
+                        }
+                    }
+                    temp_word.clear();
+                } else {
+                    temp_word.push(c);
+                }
+            }
+        }
+        let elapsed = now.elapsed();
+        println!("Parse XML elapsed: {:.5?}", elapsed.as_secs_f64());
+
+        // println!("Index: {:?}", index);
+        println!("Len: {:?}", self.ii.len());
+        println!("Max doc id: {}", &doc_id);
+
+        // let index_serial = Index { ii: index };
+        // let config = config::standard();
+
+        // let mut file = File::create("index.bin").unwrap();
+
+        // let now = Instant::now();
+        // encode_into_std_write(index_serial, &mut file, config).unwrap();
+
+        // let elapsed = now.elapsed();
+        // println!("Store file elapsed: {:.5?}", elapsed.as_secs_f64());
+        // return index_serial;
+    }
 }

@@ -4,10 +4,11 @@ use std::time::Instant;
 
 fn main() {
     let now = Instant::now();
-    if let Err(e) = asgn1::run() {
-        println!("Error: {}", e);
-        process::exit(1);
-    }
+    // if let Err(e) = asgn1::run() {
+    //     println!("Error: {}", e);
+    //     process::exit(1);
+    // }
+    asgn1::run();
     let elapsed = now.elapsed();
     println!("Elapsed: {:.5?}", elapsed.as_secs_f64());
 }

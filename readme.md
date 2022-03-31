@@ -28,5 +28,4 @@ File size: 349 MB.
 
 Current problems:
 
-- Words are truncated on punctuation. So [don't] becomes [don] and [t].
 - File size is too large. Perhaps a different data structure would be more appropriate.
