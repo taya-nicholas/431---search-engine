@@ -21,7 +21,10 @@ pub fn run() {
 
     let mut index = Index::new();
     // index.parse_contents(&lower_test_file);
-    index.parse_words(&lower_test_file);
+    let words = index.parse_words(&lower_test_file);
+    index.create_tree(&words);
+
+    println!("TREE: {:?}", index.btree);
 
     // parse_very_hack(&lower_test_file);
     println!("End of run");
@@ -36,20 +39,21 @@ fn load_index() {
 
 #[derive(Encode, Decode, PartialEq, Debug)]
 struct Index {
-    ii: BTreeMap<String, Vec<(u32, u32)>>,
+    btree: BTreeMap<String, Vec<(u32, u32)>>,
 }
 
 impl Index {
     fn new() -> Index {
         return Index {
-            ii: BTreeMap::new(),
+            btree: BTreeMap::new(),
         };
     }
 
-    fn parse_words(&self, contents: &str) {
+    fn parse_words(&self, contents: &str) -> String {
         let mut chars = contents.chars();
         let mut temp_word = String::new();
         let mut word_count = 0;
+        let mut words = String::new();
 
         let now = Instant::now();
         while let Some(mut c) = chars.next() {
@@ -60,12 +64,15 @@ impl Index {
                     c = chars.next().unwrap();
                 }
                 if tag == "<doc" {
-                    println!("");
+                    // println!("");
+                    words.push('\n');
                 }
             } else {
-                if c == ' ' || c == '\n' {
+                if c == ' ' || c == '\n' || c == '-' {
                     if !temp_word.is_empty() {
-                        println!("{}", &temp_word);
+                        // println!("{}", &temp_word);
+                        words.push('\n');
+                        words.push_str(&temp_word);
                         word_count += 1;
                     }
                     temp_word.clear();
@@ -77,6 +84,38 @@ impl Index {
         let elapsed = now.elapsed();
         println!("Parse XML elapsed: {:.5?}", elapsed.as_secs_f64());
         println!("Word count: {}", word_count);
+        words
+    }
+
+    fn create_tree(&mut self, words: &str) {
+        let mut doc_num = 0;
+        for line in words.strip_prefix("\n").unwrap().lines() {
+            if line.is_empty() {
+                doc_num += 1;
+            } else {
+                self.add_word(line, doc_num);
+            }
+        }
+    }
+
+    fn add_word(&mut self, word: &str, doc_num: u32) {
+        match self.btree.get_mut(word) {
+            Some(vec) => {
+                // if most recent posting has current doc_id, then increment word count, else add new posting.
+                // Change to struct for readability if it doesn't decrease performance too much.
+                if vec.last().unwrap().0 == doc_num {
+                    let mut temp_vec = vec.pop().unwrap();
+                    temp_vec.1 = temp_vec.1 + 1;
+                    vec.push(temp_vec);
+                } else {
+                    vec.push((doc_num, 1));
+                }
+            }
+            None => {
+                let vec = vec![(doc_num, 1)];
+                self.btree.insert(word.to_string(), vec);
+            }
+        }
     }
 
     fn parse_contents(&mut self, contents: &str) {
@@ -100,7 +139,7 @@ impl Index {
                 if !c.is_ascii_alphanumeric() {
                     if !temp_word.is_empty() {
                         // Complete word found - do something here.
-                        match self.ii.get_mut(&temp_word) {
+                        match self.btree.get_mut(&temp_word) {
                             Some(vec) => {
                                 // vec.push(doc_id);
                                 // if most recent posting has current doc_id, then increment word count, else add new posting.
@@ -114,7 +153,7 @@ impl Index {
                             }
                             None => {
                                 let vec = vec![(doc_id, 1)];
-                                self.ii.insert(temp_word.clone(), vec);
+                                self.btree.insert(temp_word.clone(), vec);
                             }
                         }
                     }
@@ -128,7 +167,7 @@ impl Index {
         println!("Parse XML elapsed: {:.5?}", elapsed.as_secs_f64());
 
         // println!("Index: {:?}", index);
-        println!("Len: {:?}", self.ii.len());
+        println!("Len: {:?}", self.btree.len());
         println!("Max doc id: {}", &doc_id);
 
         // let index_serial = Index { ii: index };

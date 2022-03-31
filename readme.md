@@ -14,11 +14,22 @@ Struct of HashMap is then converted into bincode, which is stored as .bin file.
 
 ### Performance
 
+#### Iteratoin 3
+
+Basic Index: ?
+
+- Parse words: 3 seconds.
+- Load words into index: ?
+  Encoding and storing file: ?
+  File size: ?
+  Loading file: ?
+
 #### Iteration 2
 
 Basic index: 20 seconds.
 Encoding and storing file: 7.6 minutes.
 File size: 214 MB.
+Loading file: 3 minutes.
 
 #### Iteration 1
 
