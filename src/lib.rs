@@ -1,14 +1,58 @@
 use bincode::{config, encode_into_std_write, Decode, Encode};
+use core::num;
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::env::temp_dir;
 use std::error::Error;
-use std::fs;
 use std::io::BufReader;
+use std::io::{prelude::*, SeekFrom};
 use std::time::Instant;
-use std::{fs::File, io::Read};
+use std::{fs, vec};
+use std::{fs::File, io::stdin, io::Read};
+
+// TODO - split index into multiple files.
+// TODO - display doc num for returned search.
+// TODO - add and sort by TF.IDF.
+
+pub fn testing() {
+    println!("Testing start");
+    let filename = "data/course_data/wsj.xml";
+
+    let now = Instant::now();
+    let mut f = File::open(filename).unwrap();
+    let mut buffer = [0; 14];
+    // f.read(&mut buffer).unwrap();
+    // let test_file = fs::read(filename);
+    f.seek(SeekFrom::Start(14)).unwrap();
+    f.read_exact(&mut buffer).unwrap();
+
+    println!("Buff: {:?}", buffer);
+
+    let x = String::from_utf8(buffer.to_vec()).unwrap();
+    println!("X: {}", x);
+
+    let elapsed = now.elapsed();
+    println!("Read file elapsed: {:.5?}", elapsed.as_secs_f64());
+}
 
 pub fn run() {
     // create_index();
-    load_index();
+    let now = Instant::now();
+    let index = load_index();
+    let elapsed = now.elapsed();
+    println!("Load index elapsed: {:.5?}", elapsed.as_secs_f64());
+
+    println!("Enter search term");
+    let mut s = String::new();
+    stdin()
+        .read_line(&mut s)
+        .expect("Did not enter a correct string");
+
+    println!("Searching for: {}", s);
+
+    let now = Instant::now();
+    index.search(s.trim());
+    let elapsed = now.elapsed();
+    println!("Search elapsed: {:.5?}", elapsed.as_secs_f64());
 }
 
 fn create_index() {
@@ -35,18 +79,15 @@ fn create_index() {
     let now = Instant::now();
     index.save_file();
     let elapsed = now.elapsed();
-    println!("Read file elapsed: {:.5?}", elapsed.as_secs_f64());
+    println!("Save file elapsed: {:.5?}", elapsed.as_secs_f64());
 }
 
-fn load_index() {
-    let now = Instant::now();
+fn load_index() -> Index {
     let config = config::standard();
     let file = File::open("index.bin").unwrap();
     let file = BufReader::new(file);
     let decoded: Index = bincode::decode_from_reader(file, config).unwrap();
-    let elapsed = now.elapsed();
-    println!("Load index elapsed: {:.5?}", elapsed.as_secs_f64());
-    println!("Len: {}", decoded.btree.len());
+    return decoded;
 }
 
 #[derive(Encode, Decode, PartialEq, Debug)]
@@ -108,6 +149,9 @@ impl Index {
                 self.add_word(line, doc_num);
             }
         }
+        let num_documents = self.btree.len();
+        self.btree
+            .insert("@Lengths".to_string(), vec![(num_documents as u32, 0)]);
     }
 
     fn add_word(&mut self, word: &str, doc_num: u32) {
@@ -141,13 +185,36 @@ impl Index {
         }
     }
 
+    fn decode_from_d_gap(&self, mut list: Vec<(u32, u32)>) -> Vec<(u32, u32)> {
+        let mut new_list: Vec<(u32, u32)> = vec![];
+        let mut pre_doc = 0;
+        for posting in list.iter_mut() {
+            posting.0 += pre_doc;
+            pre_doc = posting.0;
+        }
+
+        return list;
+    }
+
+    fn convert_to_tfidf(&self, list: Vec<(u32, u32)>) {
+        let docs_containing_t = list.len();
+        let num_documents = self.btree.get("@Lengths").unwrap()[0].0;
+        println!("nt: {}, N: {}", docs_containing_t, num_documents);
+        let idf: f32 = num_documents as f32 / docs_containing_t as f32;
+        println!("idf: {}", idf);
+    }
+
     fn search(self, search_term: &str) {
         match self.btree.get(search_term) {
             Some(vec) => {
                 println!("Found: {:?}", vec);
+                let decode_vec = self.decode_from_d_gap(vec.clone());
+                println!("Found decoded: {:?}", decode_vec);
+                self.convert_to_tfidf(decode_vec);
             }
             None => {
                 println!("No results found for: {}", search_term);
+                println!("Chars: {:?}", search_term.chars());
             }
         }
     }
