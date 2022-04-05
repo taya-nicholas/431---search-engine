@@ -24,11 +24,22 @@ pub fn create_persistent_btree(map: BMap) {
             file_path.set_extension("tree");
             println!("i: {}, word: {}", i, key);
             temp_vec.push(key.clone());
-            let mut file = File::create(file_path).unwrap();
-            let tree_split = map_copy.split_off(key);
-            let btree_split = BMap { btree: tree_split };
-            encode_into_std_write(btree_split, &mut file, config).unwrap();
+            // let mut file = File::create(file_path).unwrap();
+            // let tree_split = map_copy.split_off(key);
+            // let btree_split = BMap { btree: tree_split };
+            // encode_into_std_write(btree_split, &mut file, config).unwrap();
         }
     }
     println!("Vec length: {}", temp_vec.len());
+    create_entry_index(temp_vec);
+}
+
+fn create_entry_index(mut word_samples: Vec<String>) {
+    println!("Create entry index");
+    let config = config::standard();
+    let mut file_path = PathBuf::from("./root");
+    file_path.set_extension("tree");
+    let mut file = File::create(file_path).unwrap();
+    word_samples.sort();
+    encode_into_std_write(word_samples, &mut file, config).unwrap();
 }

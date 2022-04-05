@@ -1,10 +1,22 @@
-use std::{collections::BTreeMap, fs::File, io::BufReader, time::Instant};
+use std::{collections::BTreeMap, fs::File, io::BufReader, path::PathBuf, time::Instant};
 
 use bincode::config;
 
 use crate::indexer::BMap;
 
-pub fn load_index(filename: String) -> BMap {
+pub fn load_root(filename: String) -> Vec<String> {
+    let now = Instant::now();
+
+    let config = config::standard();
+    let file = File::open(filename).unwrap();
+    let file = BufReader::new(file);
+    let decoded: Vec<String> = bincode::decode_from_reader(file, config).unwrap();
+    let elapsed = now.elapsed();
+    println!("Load root elapsed: {:.5?}", elapsed.as_secs_f64());
+    return decoded;
+}
+
+pub fn load_index(filename: PathBuf) -> BMap {
     let now = Instant::now();
 
     let config = config::standard();

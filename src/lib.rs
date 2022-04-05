@@ -2,15 +2,25 @@ mod btree;
 mod index;
 mod indexer;
 mod parser;
+mod posting;
 mod search;
 
 // TODO - split index into multiple files.
 // TODO - display doc num for returned search.
 // TODO - add and sort by TF.IDF.
 
-use std::{fs::File, io::Read, path::Path};
+use std::{
+    fs::File,
+    io::{stdin, Read},
+    path::{Path, PathBuf},
+    time::Instant,
+};
 
 use crate::indexer::BMap;
+
+pub fn run_postings() {
+    posting::test_posting();
+}
 
 pub fn run_build() {
     println!("Running program");
@@ -31,13 +41,43 @@ fn read_file(filepath: &Path) -> String {
 }
 
 pub fn run_load() {
-    println!("Loading files");
-    let filename: String = String::from("./nodes/testifies.tree");
-    let map: BMap = search::load_index(filename);
+    println!("Enter search term");
+    let mut s = String::new();
+    stdin()
+        .read_line(&mut s)
+        .expect("Did not enter a correct string");
+    let mut search_term = s.trim();
+
+    // println!("Searching for: {:?}", search_term.chars());
+
+    let now = Instant::now();
+
+    let root = search::load_root("./root.tree".to_string());
+    let mut node_to_search: String;
+    match root.binary_search(&search_term.to_string()) {
+        Ok(i) => {
+            println!("Found: {}, at index {}", search_term, i);
+            node_to_search = root[i].clone();
+        }
+        Err(i) => {
+            println!(
+                "Didn't find: {}. Look in block at index {} - ({})",
+                search_term,
+                i - 1,
+                root[i - 1]
+            );
+            node_to_search = root[i - 1].clone();
+        }
+    }
+
+    let mut file_path = PathBuf::from("./nodes/").join(node_to_search);
+    file_path.set_extension("tree");
+
+    // let filename: String = String::from("./nodes/testifies.tree");
+    let map: BMap = search::load_index(file_path);
     println!("Map: {}", map.btree.len());
 
     // Search node:
-    let search_term = "testing";
     match search::search_node(map.btree, search_term) {
         Some(result) => {
             let postings = search::decode_dgap(result);
@@ -47,6 +87,8 @@ pub fn run_load() {
             println!("No result");
         }
     }
+    let elapsed = now.elapsed();
+    println!("Search time: {:.5?}", elapsed.as_secs_f64());
 }
 
 // Loading files
