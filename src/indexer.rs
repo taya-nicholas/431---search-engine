@@ -25,9 +25,6 @@ impl BMap {
                 self.add_word(word, doc_num);
             }
         }
-        // let num_documents = self.btree.len();
-        // self.btree
-        //     .insert("@Lengths".to_string(), vec![(num_documents as u32, 0)]);
     }
 
     fn add_word(&mut self, word: &str, doc_num: u32) {
@@ -46,6 +43,17 @@ impl BMap {
             None => {
                 let vec = vec![(doc_num, 1)];
                 self.btree.insert(word.to_string(), vec);
+            }
+        }
+    }
+
+    pub fn encode_dgap(&mut self) {
+        for (key, value) in self.btree.iter_mut() {
+            let mut prev_doc = 0;
+            for posting in value {
+                let temp_doc = posting.0.clone();
+                posting.0 = posting.0 - prev_doc;
+                prev_doc = temp_doc;
             }
         }
     }

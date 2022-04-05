@@ -8,16 +8,7 @@ use std::{
 };
 
 pub fn create_persistent_btree(map: BMap) {
-    // let index_serial = Index { ii: index };
     let config = config::standard();
-
-    // let mut file = File::create("index.bin").unwrap();
-
-    // let now = Instant::now();
-
-    // let elapsed = now.elapsed();
-    // println!("Store file elapsed: {:.5?}", elapsed.as_secs_f64());
-    // return index_serial;
     let mut map_copy = map.btree.clone();
     if !Path::new("./nodes").exists() {
         fs::create_dir("./nodes").unwrap();
