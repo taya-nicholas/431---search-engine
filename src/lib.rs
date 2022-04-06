@@ -16,7 +16,11 @@ use std::{
     time::Instant,
 };
 
-use crate::indexer::BMap;
+use crate::{
+    indexer::BMap,
+    posting::{map_to_posting_file, Vocab},
+    search::seek_read_posting,
+};
 
 pub fn run_postings() {
     posting::test_posting();
@@ -30,7 +34,8 @@ pub fn run_build() {
     let mut bmap = indexer::BMap::new();
     bmap.create_tree(&parsed_contents);
     bmap.encode_dgap();
-    btree::create_persistent_btree(bmap);
+    let vocab = map_to_posting_file(bmap.btree);
+    btree::create_persistent_btree(vocab);
 }
 
 fn read_file(filepath: &Path) -> String {
@@ -74,14 +79,15 @@ pub fn run_load() {
     file_path.set_extension("tree");
 
     // let filename: String = String::from("./nodes/testifies.tree");
-    let map: BMap = search::load_index(file_path);
+    let map: Vocab = search::load_index(file_path);
     println!("Map: {}", map.btree.len());
 
     // Search node:
     match search::search_node(map.btree, search_term) {
-        Some(result) => {
-            let postings = search::decode_dgap(result);
-            println!("Posting: {:?}", postings.last());
+        Some(info) => {
+            let postings = seek_read_posting(info.disk_bytes, info.disk_offset);
+            let index_postings = search::decode_dgap(postings);
+            println!("Posting: {:?}", index_postings.last());
         }
         None => {
             println!("No result");

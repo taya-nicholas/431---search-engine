@@ -10,8 +10,8 @@ fn main() {
     //     process::exit(1);
     // }
     // asgn1::run_build();
-    // asgn1::run_load();
-    asgn1::run_postings();
+    asgn1::run_load();
+    // asgn1::run_postings();
     let elapsed = now.elapsed();
     println!("Elapsed: {:.5?}", elapsed.as_secs_f64());
 }

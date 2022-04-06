@@ -1,4 +1,4 @@
-use crate::indexer::BMap;
+use crate::{indexer::BMap, posting::Vocab};
 use bincode::{config, encode_into_std_write, Decode, Encode};
 use std::{
     borrow::Borrow,
@@ -7,7 +7,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub fn create_persistent_btree(map: BMap) {
+pub fn create_persistent_btree(mut map: Vocab) {
     let config = config::standard();
     let mut map_copy = map.btree.clone();
     if !Path::new("./nodes").exists() {
@@ -24,10 +24,10 @@ pub fn create_persistent_btree(map: BMap) {
             file_path.set_extension("tree");
             println!("i: {}, word: {}", i, key);
             temp_vec.push(key.clone());
-            // let mut file = File::create(file_path).unwrap();
-            // let tree_split = map_copy.split_off(key);
-            // let btree_split = BMap { btree: tree_split };
-            // encode_into_std_write(btree_split, &mut file, config).unwrap();
+            let mut file = File::create(file_path).unwrap();
+            let tree_split = map_copy.split_off(key);
+            let btree_split = Vocab { btree: tree_split };
+            encode_into_std_write(btree_split, &mut file, config).unwrap();
         }
     }
     println!("Vec length: {}", temp_vec.len());
