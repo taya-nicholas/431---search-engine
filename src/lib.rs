@@ -11,7 +11,7 @@ mod search;
 
 use std::{
     fs::File,
-    io::{stdin, Read},
+    io::{stdin, Read, Seek, SeekFrom},
     path::{Path, PathBuf},
     time::Instant,
 };
@@ -87,7 +87,10 @@ pub fn run_load() {
         Some(info) => {
             let postings = seek_read_posting(info.disk_bytes, info.disk_offset);
             let index_postings = search::decode_dgap(postings);
-            println!("Posting: {:?}", index_postings.last());
+
+            display_postings(index_postings);
+            // println!("Posting: {:?}", index_postings.first());
+            // println!("Posting: {:?}", index_postings.last());
         }
         None => {
             println!("No result");
@@ -95,6 +98,33 @@ pub fn run_load() {
     }
     let elapsed = now.elapsed();
     println!("Search time: {:.5?}", elapsed.as_secs_f64());
+}
+
+fn display_postings(posting_list: Vec<(u32, u32)>) {
+    let now = Instant::now();
+    let len = posting_list.len();
+
+    let mut file = File::open("./doc_offsets.bin").unwrap();
+    let mut doc_file = File::open("./data/course_data/wsj.xml").unwrap();
+    for (doc_id, tf) in posting_list {
+        let offset_offset = doc_id * 4; // 4 bytes per u32 integer
+        file.seek(SeekFrom::Start(offset_offset as u64)).unwrap();
+        // let mut buf = vec![0u8; 4]; // read 4 bytes
+        let mut buf: [u8; 4] = [0u8; 4];
+        file.read_exact(&mut buf).unwrap();
+        let doc_offset: u32 = u32::from_be_bytes(buf);
+
+        doc_file.seek(SeekFrom::Start(doc_offset as u64)).unwrap();
+
+        let mut label_buf = vec![0u8; 16]; // journal tags, including spaces are all 16 characters
+        doc_file.read_exact(&mut label_buf).unwrap();
+        let s = std::str::from_utf8(&label_buf).unwrap();
+        println!("Label: {}", s.trim());
+    }
+
+    let elapsed = now.elapsed();
+    println!("For {} documents", len);
+    println!("Display postings elapsed: {:.5?}", elapsed.as_secs_f64());
 }
 
 // Loading files

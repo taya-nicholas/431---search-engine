@@ -43,15 +43,15 @@ pub fn search_node(map: BTreeMap<String, Info>, search_term: &str) -> Option<Inf
     {
         match map.get(search_term) {
             Some(val) => {
-                println!("Found {}: {:?}", search_term, val);
                 let elapsed = now.elapsed();
                 println!("Node search elapsed: {:.5?}", elapsed.as_secs_f64());
+                println!("Found {}: {:?}", search_term, val);
                 return Some(val.clone());
             }
             None => {
-                println!("Found nothing for {}", search_term);
                 let elapsed = now.elapsed();
                 println!("Node search elapsed: {:.5?}", elapsed.as_secs_f64());
+                println!("Found nothing for {}", search_term);
                 return None;
             }
         }

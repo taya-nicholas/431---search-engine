@@ -167,3 +167,21 @@ fn serialize_posting(post: Vec<(u32, u32)>, post1: Vec<(u32, u32)>) {
         decoded_from_exact.len()
     );
 }
+
+#[test]
+fn read_doc_ref() {
+    let offset: u64 = 2388;
+    let bytes_to_read = 16;
+    let mut reader = File::open("./data/course_data/wsj.xml").unwrap();
+    reader.seek(SeekFrom::Start(offset)).unwrap();
+    let mut buf = vec![0u8; bytes_to_read];
+    reader.read_exact(&mut buf).unwrap();
+    let s = std::str::from_utf8(&buf).unwrap();
+    println!("Buf: {}", &s);
+}
+
+// Count: 13
+// Count: 1166
+// Count: 1677
+// Count: 2087
+// Count: 2388
