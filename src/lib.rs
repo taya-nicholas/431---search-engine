@@ -5,8 +5,6 @@ mod parser;
 mod posting;
 mod search;
 
-// TODO - split index into multiple files.
-// TODO - display doc num for returned search.
 // TODO - add and sort by TF.IDF.
 
 use std::{
@@ -14,6 +12,7 @@ use std::{
     io::{stdin, Read, Seek, SeekFrom},
     path::{Path, PathBuf},
     time::Instant,
+    vec,
 };
 
 use crate::{
@@ -88,7 +87,8 @@ pub fn run_load() {
             let postings = seek_read_posting(info.disk_bytes, info.disk_offset);
             let index_postings = search::decode_dgap(postings);
 
-            display_postings(index_postings);
+            let relevance_postings = rank_postings(index_postings);
+            display_postings(relevance_postings);
             // println!("Posting: {:?}", index_postings.first());
             // println!("Posting: {:?}", index_postings.last());
         }
@@ -100,17 +100,63 @@ pub fn run_load() {
     println!("Search time: {:.5?}", elapsed.as_secs_f64());
 }
 
-fn display_postings(posting_list: Vec<(u32, u32)>) {
+#[test]
+fn test_retieve_doc_lengths() {
+    let mock_postings = vec![(1, 5)];
+    let len_list = rank_postings(mock_postings);
+    println!("Len: {:?}", len_list);
+}
+
+// TF.IDF = tf/doc_len * num_of_docs / num_of_docs_with_term
+
+fn rank_postings(posting_list: Vec<(u32, u32)>) -> Vec<(u32, f64)> {
+    // Attempting rank based on single postings list.
+    // With have to change things when merging, as postings_list.len() will
+    // no longer represent num_of_docs_with_term.
+    let mut file = File::open("./doc_lengths.bin").unwrap();
+
+    let mut buf: [u8; 4] = [0u8; 4];
+    file.read_exact(&mut buf).unwrap();
+    let collection_length: u32 = u32::from_be_bytes(buf);
+    println!("Collection len: {}", collection_length);
+
+    let posting_length: u32 = posting_list.len() as u32;
+    let mut doc_lengths = vec![];
+
+    let mut relevance_postings = vec![];
+    for (doc_id, tf) in posting_list {
+        // Read doc length in doc_lengths.bin file by seek_read, based on doc_id number.
+        let length_offset = (doc_id) * 4; // -1 to start at 0, +1 because first element is collection length
+        file.seek(SeekFrom::Start(length_offset as u64)).unwrap();
+        let mut buf: [u8; 4] = [0u8; 4];
+        file.read_exact(&mut buf).unwrap();
+        let doc_length: u32 = u32::from_be_bytes(buf);
+        doc_lengths.push(doc_length);
+
+        let score: f64 = (f64::from(tf) / f64::from(doc_length))
+            * (f64::from(collection_length) / f64::from(posting_length));
+        relevance_postings.push((doc_id, score));
+    }
+    // In order to sort by float (second element in tuple)
+    relevance_postings.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+    return relevance_postings;
+}
+
+fn display_postings(posting_list: Vec<(u32, f64)>) {
     let now = Instant::now();
     let len = posting_list.len();
 
     let mut file = File::open("./doc_offsets.bin").unwrap();
     let mut doc_file = File::open("./data/course_data/wsj.xml").unwrap();
-    for (doc_id, tf) in posting_list {
-        let offset_offset = doc_id * 4; // 4 bytes per u32 integer
+
+    // let mut output = String::new();
+
+    for (doc_id, score) in posting_list {
+        let offset_offset = (doc_id - 1) * 4; // doc_id as index (from 0). Each offset is 4 bytes, so must be shifted.
         file.seek(SeekFrom::Start(offset_offset as u64)).unwrap();
         // let mut buf = vec![0u8; 4]; // read 4 bytes
         let mut buf: [u8; 4] = [0u8; 4];
+        // println!("Seek from : {}", offset_offset as u64);
         file.read_exact(&mut buf).unwrap();
         let doc_offset: u32 = u32::from_be_bytes(buf);
 
@@ -119,33 +165,12 @@ fn display_postings(posting_list: Vec<(u32, u32)>) {
         let mut label_buf = vec![0u8; 16]; // journal tags, including spaces are all 16 characters
         doc_file.read_exact(&mut label_buf).unwrap();
         let s = std::str::from_utf8(&label_buf).unwrap();
-        println!("Label: {}", s.trim());
+        println!("{} - {}", s.trim(), score);
     }
+
+    // println!("Output: {}", output);
 
     let elapsed = now.elapsed();
     println!("For {} documents", len);
     println!("Display postings elapsed: {:.5?}", elapsed.as_secs_f64());
 }
-
-// Loading files
-// Load Node elapsed: 0.00698
-// Map: 592
-// Found testing: 3106
-// Node search elapsed: 0.00010
-// Decode dgap elapsed: 0.00000
-// Posting: Some((273860375, 1))
-// Elapsed: 0.00837
-
-// 2.7 MB max (testifies.tree)
-
-//After encoding:
-// 1 MB max (testifies.tree)
-
-// Loading files
-// Load Node elapsed: 0.00536
-// Map: 592
-// Found testing: 3106
-// Node search elapsed: 0.00014
-// Decode dgap elapsed: 0.00000
-// Posting: Some((173109, 1))
-// Elapsed: 0.00687

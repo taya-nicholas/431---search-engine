@@ -180,6 +180,19 @@ fn read_doc_ref() {
     println!("Buf: {}", &s);
 }
 
+#[test]
+fn read_doc_offset() {
+    let offset: u64 = 693008;
+    // let bytes_to_read = 4;
+    let mut reader = File::open("./doc_offsets.bin").unwrap();
+    reader.seek(SeekFrom::Start(offset)).unwrap();
+    // let mut buf = vec![0u8; bytes_to_read];
+    let mut buf: [u8; 4] = [0u8; 4];
+    reader.read_exact(&mut buf).unwrap();
+    let doc_offset: u32 = u32::from_be_bytes(buf);
+    println!("Buf: {}", doc_offset);
+}
+
 // Count: 13
 // Count: 1166
 // Count: 1677

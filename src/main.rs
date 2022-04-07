@@ -1,7 +1,6 @@
 use std::path::Path;
 use std::time::Instant;
 use std::{fs, process};
-// Author: Taya Nicholas (5929161)
 
 fn main() {
     let now = Instant::now();
