@@ -52,7 +52,7 @@ File sizes:
 - postings.bin = 90 MB
 - doc_lengths/doc_offsets.bin = 677kb
 
-#### Iteratoin 3
+#### Iteration 3
 
 Basic Index: 29 seconds.
 
