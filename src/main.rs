@@ -1,13 +1,10 @@
-use std::path::Path;
-use std::time::Instant;
-use std::{fs, process};
-
+#[allow(dead_code)]
 enum Mode {
     Indexer,
     Searcher,
 }
 
-const MODE: Mode = Mode::Indexer;
+const MODE: Mode = Mode::Searcher;
 
 fn main() {
     match MODE {
@@ -17,6 +14,7 @@ fn main() {
         }
         Mode::Searcher => {
             println!("searcher running");
+            asgn1::start_search();
         }
     }
 
