@@ -6,6 +6,7 @@ See docs/explanation.md for a description of the program and how it works.
 
 - Allow multi-word queries, using some posting multi-way merge
 - Allow score to work in multi-word queries
+- Change tree datastructure to vector of tuples (loading btree is takingn too long).
 
 # Current status
 

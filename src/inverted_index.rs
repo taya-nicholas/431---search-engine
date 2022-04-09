@@ -35,12 +35,12 @@ pub fn new() -> Index {
 impl Index {
     pub fn create_tree_from_parsed_contents(&mut self, words: &str) {
         let mut doc_num = 0;
-        let mut words_in_document = 0;
+        // let mut words_in_document = 0;
         for word in words.strip_prefix("\n").unwrap().lines() {
             if word.is_empty() {
                 doc_num += 1;
             } else {
-                words_in_document += 1;
+                // words_in_document += 1;
                 self.add_word(word, doc_num);
             }
         }
@@ -67,7 +67,7 @@ impl Index {
     }
 
     pub fn encode_dgap(&mut self) {
-        for (key, value) in self.btree.iter_mut() {
+        for (_key, value) in self.btree.iter_mut() {
             let mut prev_doc = 0;
             for posting in value {
                 let temp_doc = posting.0.clone();
