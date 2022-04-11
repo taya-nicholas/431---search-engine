@@ -46,17 +46,24 @@ pub fn start_search() {
     let now = Instant::now();
     let mut s = search::new();
 
-    {
-        for term in query {
-            s.search(term.to_string());
-        }
-        let merged = s.merge_postings();
-        match merged {
-            Some(list) => s.display_postings(list),
-            None => println!("No postings to display"),
-        }
+    let s_time = Instant::now();
+    for term in query {
+        s.search(term.to_string());
     }
+    let s_elapsed = s_time.elapsed();
+    let m_time = Instant::now();
+    let merged = s.merge_postings();
+    let m_elapsed = m_time.elapsed();
+    let d_time = Instant::now();
+    match merged {
+        Some(list) => s.display_postings(list),
+        None => println!("No postings to display"),
+    }
+    let d_elapsed = d_time.elapsed();
 
     let elapsed = now.elapsed();
-    println!("Search time: {:.5?}", elapsed.as_secs_f64())
+    println!("Simple search time: {:.5?}", s_elapsed.as_secs_f64());
+    println!("Merge time: {:.5?}", m_elapsed.as_secs_f64());
+    println!("Display time: {:.5?}", d_elapsed.as_secs_f64());
+    println!("Search time: {:.5?}", elapsed.as_secs_f64());
 }

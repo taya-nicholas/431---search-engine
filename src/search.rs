@@ -181,28 +181,59 @@ impl Search {
                 return Some(merged_postings);
             }
             _ => {
-                let mut tree: BTreeMap<u32, f64> = BTreeMap::new();
-                for vec in self.multi_postings.to_owned() {
-                    for posting in vec {
-                        match tree.get_mut(&posting.0) {
-                            Some(score) => {
-                                // val present - update
-                                *score = *score + posting.1;
-                            }
-                            None => {
-                                // val not present, add
-                                tree.insert(posting.0, posting.1);
-                            }
+                let now = Instant::now();
+                let mut postings = self.multi_postings.to_owned();
+                let num_merges = postings.len();
+                let mut flatten: Vec<(u32, f64)> = postings.into_iter().flatten().collect();
+
+                flatten.sort_by(|a, b| a.0.cmp(&b.0));
+                let mut merged_list = vec![];
+                let mut doc_count = 0;
+                let mut doc_target = 0;
+                let mut running_score: f64 = 0.0;
+                for (doc_id, score) in flatten {
+                    if doc_target == doc_id {
+                        doc_count += 1;
+                        running_score += score;
+                        if doc_count == num_merges {
+                            let combined_posting = (doc_target, running_score);
+                            merged_list.push(combined_posting)
                         }
+                    } else {
+                        doc_target = doc_id;
+                        doc_count = 1;
+                        running_score = score;
                     }
                 }
-                let mut merged_postings = vec![];
-                for (key, value) in tree.into_iter() {
-                    merged_postings.push((key, value));
-                }
-                merged_postings.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-                // self.merged_postings = merged_postings;
-                return Some(merged_postings);
+
+                merged_list.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
+                let elapsed = now.elapsed();
+                println!("Merge postings elapsed {:.5?}", elapsed.as_secs_f64());
+
+                return Some(merged_list);
+                // let mut tree: BTreeMap<u32, f64> = BTreeMap::new();
+                // for vec in self.multi_postings.to_owned() {
+                //     for posting in vec {
+                //         match tree.get_mut(&posting.0) {
+                //             Some(score) => {
+                //                 // val present - update
+                //                 *score = *score + posting.1;
+                //             }
+                //             None => {
+                //                 // val not present, add
+                //                 tree.insert(posting.0, posting.1);
+                //             }
+                //         }
+                //     }
+                // }
+                // let mut merged_postings = vec![];
+                // for (key, value) in tree.into_iter() {
+                //     merged_postings.push((key, value));
+                // }
+                // merged_postings.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+                // // self.merged_postings = merged_postings;
+                // return Some(merged_postings);
             }
         }
     }
@@ -210,7 +241,6 @@ impl Search {
 
 impl Search {
     pub fn display_postings(&self, posting_list: Vec<(u32, f64)>) {
-        let now = Instant::now();
         let len = posting_list.len();
 
         let mut file = File::open("./doc_offsets.bin").unwrap();
@@ -232,13 +262,9 @@ impl Search {
             let mut label_buf = vec![0u8; 16]; // journal tags, including spaces are all 16 characters
             doc_file.read_exact(&mut label_buf).unwrap();
             let s = std::str::from_utf8(&label_buf).unwrap();
-            println!("{} - {}", s.trim(), score);
+            println!("{} - {:.4?}", s.trim(), score);
         }
 
-        // println!("Output: {}", output);
-
-        let elapsed = now.elapsed();
         println!("For {} documents", len);
-        println!("Display postings elapsed: {:.5?}", elapsed.as_secs_f64());
     }
 }
