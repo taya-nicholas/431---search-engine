@@ -114,8 +114,6 @@ impl Index {
             if i % block_size == 0 {
                 let mut file_path = PathBuf::from("./index/nodes/").join(key);
                 file_path.set_extension("tree");
-                // println!("i: {}, word: {}", i, key);
-
                 temp_vec.push(key.clone());
                 let mut file = File::create(file_path).unwrap();
                 let tree_split = map_copy.split_off(key);
