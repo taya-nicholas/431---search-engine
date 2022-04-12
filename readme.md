@@ -6,7 +6,7 @@ See docs/explanation.md for a description of the program and how it works.
 
 The program is built in rust, so requires a rust installation. See https://www.rust-lang.org/ for installation instructions. This will come with the package manager 'Cargo'.
 
-Build the program with `$ cargo build --release.`
+Build the program with `$ cargo build --release`
 
 Run the executable: `$ ./target/release/asgn1.exe > output.txt`
 (or leave output pipe blank for the program to print to terminal)
