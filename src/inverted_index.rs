@@ -35,12 +35,10 @@ pub fn new() -> Index {
 impl Index {
     pub fn create_tree_from_parsed_contents(&mut self, words: &str) {
         let mut doc_num = 0;
-        // let mut words_in_document = 0;
         for word in words.strip_prefix("\n").unwrap().lines() {
             if word.is_empty() {
                 doc_num += 1;
             } else {
-                // words_in_document += 1;
                 self.add_word(word, doc_num);
             }
         }
@@ -49,8 +47,6 @@ impl Index {
     fn add_word(&mut self, word: &str, doc_num: u32) {
         match self.btree.get_mut(word) {
             Some(vec) => {
-                // if most recent posting has current doc_id, then increment word count, else add new posting.
-                // Change to struct for readability if it doesn't decrease performance too much.
                 if vec.last().unwrap().0 == doc_num {
                     let mut temp_vec = vec.pop().unwrap();
                     temp_vec.1 = temp_vec.1 + 1;
@@ -82,13 +78,12 @@ impl Index {
 impl Index {
     pub fn create_postings_and_vocab(&mut self) {
         let config = config::standard();
-        let mut postings_file = File::create("./postings.bin").unwrap();
+        let mut postings_file = File::create("./index/postings.bin").unwrap();
         let mut total_bytes = 0;
 
         for (key, value) in self.btree.iter() {
             let bytes = bincode::encode_to_vec(value.clone(), config).unwrap();
             let num_bytes = postings_file.write(&bytes[..]).unwrap();
-            // println!("Key: {}, bytes: {}", key, num_bytes);
             self.vocab_tree.insert(
                 key.to_string(),
                 Info {
@@ -99,11 +94,6 @@ impl Index {
             );
             total_bytes += num_bytes;
         }
-        println!(
-            "Vocab tree: len - {}, index 1 - {:?}",
-            self.vocab_tree.len(),
-            self.vocab_tree.get("tester")
-        );
     }
 }
 
@@ -112,18 +102,17 @@ impl Index {
     pub fn create_persistent_btree(&self) {
         let config = config::standard();
         let mut map_copy = self.vocab_tree.clone();
-        if !Path::new("./nodes").exists() {
-            fs::create_dir("./nodes").unwrap();
+        if !Path::new("./index/nodes").exists() {
+            fs::create_dir("./index/nodes").unwrap();
         }
 
         let length = self.vocab_tree.len();
         let block_size = (length as f64).sqrt() as usize + 1;
-        println!("Map length: {}, blocksize: {}", length, block_size);
 
         let mut temp_vec: Vec<String> = vec![];
         for (i, (key, _value)) in self.vocab_tree.iter().enumerate().rev() {
             if i % block_size == 0 {
-                let mut file_path = PathBuf::from("./nodes/").join(key);
+                let mut file_path = PathBuf::from("./index/nodes/").join(key);
                 file_path.set_extension("tree");
                 // println!("i: {}, word: {}", i, key);
 
@@ -134,14 +123,12 @@ impl Index {
                 encode_into_std_write(btree_split, &mut file, config).unwrap();
             }
         }
-        println!("Vec length: {}", temp_vec.len());
         self.create_entry_index(temp_vec);
     }
 
     fn create_entry_index(&self, mut word_samples: Vec<String>) {
-        println!("Create entry index");
         let config = config::standard();
-        let mut file_path = PathBuf::from("./root");
+        let mut file_path = PathBuf::from("./index/root");
         file_path.set_extension("tree");
         let mut file = File::create(file_path).unwrap();
         word_samples.sort();

@@ -68,35 +68,25 @@ impl Parser {
     }
 
     pub fn create_doc_offset_file(&self) {
-        let mut file = File::create("doc_offsets.bin").unwrap();
-        let mut total_bytes = 0;
-        let len = self.doc_offsets.len();
+        let mut file = File::create("./index/doc_offsets.bin").unwrap();
 
         for offset in &self.doc_offsets {
             let bytes = offset.to_be_bytes();
-            let bytes_written = file.write(&bytes).unwrap();
-            total_bytes += bytes_written;
+            let _bytes_written = file.write(&bytes).unwrap();
         }
-        println!("TOTAL BYTES: {}, for len {}", total_bytes, len);
     }
 
     pub fn create_doc_length_file(&self) {
         let num_docs = self.doc_lengths.len() as u32;
-        let mut file = File::create("doc_lengths.bin").unwrap();
-        let mut total_bytes = 0;
+        let mut file = File::create("./index/doc_lengths.bin").unwrap();
 
         //Write num docs as first bytes
         let bytes = num_docs.to_be_bytes();
-        let bytes_written = file.write(&bytes).unwrap();
-        println!("first bytes written: {}", bytes_written);
-        total_bytes += bytes_written;
+        let _bytes_written = file.write(&bytes).unwrap();
 
         for length in &self.doc_lengths {
             let bytes = length.to_be_bytes();
-            let bytes_written = file.write(&bytes).unwrap();
-            total_bytes += bytes_written;
+            let _bytes_written = file.write(&bytes).unwrap();
         }
-        println!("TOTAL BYTES Lengths: {}", total_bytes);
-        println!("Num DOCS: {}", num_docs);
     }
 }

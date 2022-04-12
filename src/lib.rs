@@ -1,13 +1,14 @@
 use std::{
-    fs::File,
+    fs::{self, File},
     io::{stdin, Read},
     path::Path,
-    time::Instant,
 };
 
 mod inverted_index;
 mod parser;
 mod search;
+
+pub const WSJ_PATH: &str = "./data/course_data/wsj.xml";
 
 fn read_file(filepath: &Path) -> String {
     let mut f = File::open(filepath).unwrap();
@@ -17,8 +18,11 @@ fn read_file(filepath: &Path) -> String {
 }
 
 pub fn create_index() {
-    println!("create index here");
-    let filepath = Path::new("./data/course_data/wsj.xml");
+    if !Path::new("./index").exists() {
+        fs::create_dir("./index").unwrap();
+    }
+
+    let filepath = Path::new(WSJ_PATH);
     let doc_collection_contents = read_file(filepath);
 
     let mut p = parser::new();
@@ -35,35 +39,24 @@ pub fn create_index() {
 }
 
 pub fn start_search() {
-    println!("Enter search term");
     let mut input = String::new();
     stdin()
         .read_line(&mut input)
         .expect("Did not enter a correct string");
     let input = input.trim().to_ascii_lowercase();
+    let input: String = input
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric() || c.is_ascii_whitespace())
+        .collect();
     let query: Vec<&str> = input.split_whitespace().collect();
-
-    let now = Instant::now();
     let mut s = search::new();
 
-    let s_time = Instant::now();
     for term in query {
         s.search(term.to_string());
     }
-    let s_elapsed = s_time.elapsed();
-    let m_time = Instant::now();
     let merged = s.merge_postings();
-    let m_elapsed = m_time.elapsed();
-    let d_time = Instant::now();
     match merged {
         Some(list) => s.display_postings(list),
-        None => println!("No postings to display"),
+        None => (),
     }
-    let d_elapsed = d_time.elapsed();
-
-    let elapsed = now.elapsed();
-    println!("Simple search time: {:.5?}", s_elapsed.as_secs_f64());
-    println!("Merge time: {:.5?}", m_elapsed.as_secs_f64());
-    println!("Display time: {:.5?}", d_elapsed.as_secs_f64());
-    println!("Search time: {:.5?}", elapsed.as_secs_f64());
 }
