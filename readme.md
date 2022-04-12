@@ -4,7 +4,7 @@ See docs/explanation.md for a description of the program and how it works.
 
 # How to run
 
-The program is built in rust, so requires a rust installation. See https://www.rust-lang.org/ for installation instructions. This will come with the package manager 'Cargo'.
+The program is built in rust, so requires a rust installation. See https://www.rust-lang.org/tools/install for installation instructions. This will come with the package manager 'Cargo'.
 
 Build the program with `$ cargo build --release`
 
