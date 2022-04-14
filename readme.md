@@ -20,6 +20,8 @@ You can change the program to parse a document collection to create an inverted 
 Please also change the WSJ_PATH variable at the top of ./src/lib.rs to point to the document collection being used.
 This is important for parsing as well as searching, as the DOC_IDs are read from that original collection file.
 
+To test the parser (have it print to stdout), set the DISPLAY_PARSER variable at the top of ./src/lib.rs to true. Setting it to false allows the index to be created. This will only run when in Mode::Indexer.
+
 ### Inverted index location
 
 The index folder contains all files and subfolders required for searching. Place the index folder (with everything inside) in the rust root directory (at the same level as the readme.md).
